@@ -64,6 +64,7 @@
 #include "inet_ntop.h"
 #include "curl_threads.h"
 #include "connect.h"
+#include "strdup.h"
 
 #ifdef USE_ARES
 #include <ares.h>
@@ -428,7 +429,7 @@ static void destroy_async_data(struct Curl_async *async)
 static CURLcode resolve_httpsrr(struct Curl_easy *data,
                                 struct Curl_async *asp)
 {
-  int status = ares_init(&asp->tdata->channel);
+  int status = ares_init_options(&asp->tdata->channel, NULL, 0);
   if(status != ARES_SUCCESS)
     return CURLE_FAILED_INIT;
 
@@ -619,6 +620,17 @@ CURLcode Curl_resolver_is_resolved(struct Curl_easy *data,
       destroy_async_data(&data->state.async);
       return result;
     }
+#ifdef USE_HTTPSRR_ARES
+    {
+      struct Curl_https_rrinfo *lhrr =
+        Curl_memdup(&td->hinfo, sizeof(struct Curl_https_rrinfo));
+      if(!lhrr) {
+        destroy_async_data(&data->state.async);
+        return CURLE_OUT_OF_MEMORY;
+      }
+      data->state.async.dns->hinfo = lhrr;
+    }
+#endif
     destroy_async_data(&data->state.async);
     *entry = data->state.async.dns;
   }

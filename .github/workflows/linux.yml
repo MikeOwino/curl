@@ -172,7 +172,7 @@ jobs:
 
           - name: openssl -O3 valgrind
             install_packages: zlib1g-dev valgrind
-            configure: CPPFLAGS=-DCURL_WARN_SIGN_CONVERSION CFLAGS=-O3 --with-openssl --enable-debug
+            configure: CFLAGS=-O3 --with-openssl --enable-debug
 
           - name: openssl clang krb5
             install_packages: zlib1g-dev libkrb5-dev clang
@@ -297,45 +297,44 @@ jobs:
             container: 'alpine:3.18'
 
     steps:
-      - if: matrix.build.container == null && !contains(matrix.build.name, 'i686')
+      - name: 'install prereqs'
+        if: matrix.build.container == null && !contains(matrix.build.name, 'i686')
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
-          sudo apt-get update -y
-          sudo apt-get install -y --no-install-suggests --no-install-recommends \
+          sudo apt-get -o Dpkg::Use-Pty=0 update
+          sudo apt-get -o Dpkg::Use-Pty=0 install \
             libtool autoconf automake pkgconf ninja-build \
             ${{ matrix.build.install_steps != 'skipall' && matrix.build.install_steps != 'skiprun' && 'stunnel4' || '' }} \
             libpsl-dev libbrotli-dev libzstd-dev \
             ${{ matrix.build.install_packages }}
           python3 -m venv $HOME/venv
-        name: 'install prereqs'
 
-      - if: contains(matrix.build.name, 'i686')
+      - name: 'install prereqs'
+        if: contains(matrix.build.name, 'i686')
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo dpkg --add-architecture i386
-          sudo apt-get update -y
-          sudo apt-get install -y --no-install-suggests --no-install-recommends \
+          sudo apt-get -o Dpkg::Use-Pty=0 update
+          sudo apt-get -o Dpkg::Use-Pty=0 install \
             libtool autoconf automake pkgconf stunnel4 \
             libpsl-dev:i386 libbrotli-dev:i386 libzstd-dev:i386 \
             ${{ matrix.build.install_packages }}
           python3 -m venv $HOME/venv
-        name: 'install prereqs'
 
-      - if: contains(matrix.build.install_steps, 'pytest')
+      - name: 'install prereqs for pytest'
+        if: contains(matrix.build.install_steps, 'pytest')
         run: |
-          sudo apt-get install -y --no-install-suggests --no-install-recommends \
-            apache2 apache2-dev libnghttp2-dev vsftpd
-        name: 'install prereqs for pytest'
+          sudo apt-get -o Dpkg::Use-Pty=0 install apache2 apache2-dev libnghttp2-dev vsftpd
 
-      - if: startsWith(matrix.build.container, 'alpine')
+      - name: 'install dependencies'
+        if: startsWith(matrix.build.container, 'alpine')
         run: |
           apk add --no-cache build-base autoconf automake libtool perl openssl-dev libssh2-dev \
             zlib-dev brotli-dev zstd-dev libidn2-dev openldap-dev heimdal-dev libpsl-dev \
             py3-impacket py3-asn1 py3-six py3-pycryptodomex \
             perl-time-hires openssh stunnel sudo git
-        name: 'install dependencies'
 
-      - name: 'Fix kernel mmap rnd bits'
+      - name: 'fix kernel mmap rnd bits'
         # Asan in llvm 14 provided in ubuntu 22.04 is incompatible with
         # high-entropy ASLR in much newer kernels that GitHub runners are
         # using leading to random crashes: https://reviews.llvm.org/D148280
@@ -437,7 +436,7 @@ jobs:
           cache-name: cache-wolfssh
         with:
           path: ~/wolfssh
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ env.wolfssl-version }}-${{ env.wolfssh-version }}
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ env.wolfssh-version }}-${{ env.wolfssl-version }}
 
       - name: 'build wolfssh'
         if: contains(matrix.build.install_steps, 'wolfssh') && steps.cache-wolfssh.outputs.cache-hit != 'true'
@@ -579,23 +578,22 @@ jobs:
           cd rustls-ffi
           make DESTDIR=$HOME/rustls install
 
-      - if: contains(matrix.build.install_steps, 'intel')
+      - name: 'install Intel compilers'
+        if: contains(matrix.build.install_steps, 'intel')
         run: |
-          cd /tmp
-          curl -sSf --compressed https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | sudo apt-key add -
+          curl -sSf --compressed https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | sudo tee /etc/apt/trusted.gpg.d/intel-sw.asc >/dev/null
           sudo add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"
-          sudo apt install --no-install-recommends intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic
+          sudo apt-get -o Dpkg::Use-Pty=0 install intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic
           source /opt/intel/oneapi/setvars.sh
           printenv >> $GITHUB_ENV
-        name: 'install Intel compilers'
 
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           persist-credentials: false
 
-      - run: autoreconf -fi
+      - name: 'autoreconf'
         if: ${{ matrix.build.configure }}
-        name: 'autoreconf'
+        run: autoreconf -fi
 
       - name: 'configure'
         run: |
@@ -651,9 +649,9 @@ jobs:
         if: ${{ matrix.build.make-custom-target != 'tidy' }}
         run: ./src/curl -V
 
-      - run: cmake --install . --prefix $HOME/curl --strip
+      - name: 'cmake install'
         if: ${{ matrix.build.generate }}
-        name: 'cmake install'
+        run: cmake --install . --prefix $HOME/curl --strip
 
       - name: 'build tests'
         if: ${{ matrix.build.install_steps != 'skipall' }}
