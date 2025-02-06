@@ -917,6 +917,7 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
     break;
 #endif
 
+#ifdef HAVE_GSSAPI
   case CURLOPT_GSSAPI_DELEGATION:
     /*
      * GSS-API credential delegation bitmask
@@ -924,6 +925,7 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
     data->set.gssapi_delegation = (unsigned char)uarg&
       (CURLGSSAPI_DELEGATION_POLICY_FLAG|CURLGSSAPI_DELEGATION_FLAG);
     break;
+#endif
   case CURLOPT_SSL_VERIFYPEER:
     /*
      * Enable peer SSL verifying.
@@ -1104,7 +1106,8 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
      */
     if(arg > 2)
       return CURLE_BAD_FUNCTION_ARGUMENT;
-    data->set.connect_only = (unsigned char)arg;
+    data->set.connect_only = !!arg;
+    data->set.connect_only_ws = (arg == 2);
     break;
 
   case CURLOPT_SSL_SESSIONID_CACHE:
@@ -2422,6 +2425,7 @@ static CURLcode setopt_cptr(struct Curl_easy *data, CURLoption option,
      */
     return Curl_setstropt(&data->set.str[STRING_SSH_PRIVATE_KEY], ptr);
 
+#if defined(USE_LIBSSH2) || defined(USE_LIBSSH)
   case CURLOPT_SSH_HOST_PUBLIC_KEY_MD5:
     /*
      * Option to allow for the MD5 of the host public key to be checked
@@ -2434,7 +2438,7 @@ static CURLcode setopt_cptr(struct Curl_easy *data, CURLoption option,
      * Store the filename to read known hosts from.
      */
     return Curl_setstropt(&data->set.str[STRING_SSH_KNOWNHOSTS], ptr);
-
+#endif
   case CURLOPT_SSH_KEYDATA:
     /*
      * Custom client data to pass to the SSH keyfunc callback
