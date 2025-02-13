@@ -40,31 +40,31 @@ struct Curl_dns_entry;
 /* Data for synchronization between resolver thread and its parent */
 struct thread_sync_data {
   curl_mutex_t *mtx;
-  bool done;
-  int port;
   char *hostname;        /* hostname to resolve, Curl_async.hostname
                             duplicate */
 #ifndef CURL_DISABLE_SOCKETPAIR
-  struct Curl_easy *data;
   curl_socket_t sock_pair[2]; /* eventfd/pipes/socket pair */
 #endif
-  int sock_error;
   struct Curl_addrinfo *res;
 #ifdef HAVE_GETADDRINFO
   struct addrinfo hints;
 #endif
-  struct thread_data *td; /* for thread-self cleanup */
+  int port;
+  int sock_error;
+  bool done;
 };
 
 struct thread_data {
   curl_thread_t thread_hnd;
   unsigned int poll_interval;
   timediff_t interval_end;
+  struct curltime start;
   struct thread_sync_data tsd;
 #if defined(USE_HTTPSRR) && defined(USE_ARES)
   struct Curl_https_rrinfo hinfo;
   ares_channel channel;
 #endif
+  bool init;
 };
 
 #elif defined(CURLRES_ARES) /* CURLRES_THREADED */
@@ -80,7 +80,7 @@ struct thread_data {
 #ifdef USE_HTTPSRR
   struct Curl_https_rrinfo hinfo;
 #endif
-  char hostname[1];
+  char *hostname;
 };
 
 #endif /* CURLRES_ARES */

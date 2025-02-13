@@ -601,8 +601,8 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
     switch(arg) {
     case CURL_HTTP_VERSION_NONE:
 #ifdef USE_HTTP2
-      /* TODO: this seems an undesirable quirk to force a behaviour on
-       * lower implementations that they should recognize independently? */
+      /* This seems an undesirable quirk to force a behaviour on lower
+       * implementations that they should recognize independently? */
       arg = CURL_HTTP_VERSION_2TLS;
 #endif
       /* accepted */
@@ -917,6 +917,7 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
     break;
 #endif
 
+#ifdef HAVE_GSSAPI
   case CURLOPT_GSSAPI_DELEGATION:
     /*
      * GSS-API credential delegation bitmask
@@ -924,6 +925,7 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
     data->set.gssapi_delegation = (unsigned char)uarg&
       (CURLGSSAPI_DELEGATION_POLICY_FLAG|CURLGSSAPI_DELEGATION_FLAG);
     break;
+#endif
   case CURLOPT_SSL_VERIFYPEER:
     /*
      * Enable peer SSL verifying.
@@ -1104,7 +1106,8 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
      */
     if(arg > 2)
       return CURLE_BAD_FUNCTION_ARGUMENT;
-    data->set.connect_only = (unsigned char)arg;
+    data->set.connect_only = !!arg;
+    data->set.connect_only_ws = (arg == 2);
     break;
 
   case CURLOPT_SSL_SESSIONID_CACHE:
@@ -1581,10 +1584,6 @@ static CURLcode setopt_pointers(struct Curl_easy *data, CURLoption option,
       if(data->share->hsts == data->hsts)
         data->hsts = NULL;
 #endif
-#ifdef USE_SSL
-      if(data->share->ssl_scache == data->state.ssl_scache)
-        data->state.ssl_scache = data->multi ? data->multi->ssl_scache : NULL;
-#endif
 #ifdef USE_LIBPSL
       if(data->psl == &data->share->psl)
         data->psl = data->multi ? &data->multi->psl : NULL;
@@ -1624,10 +1623,6 @@ static CURLcode setopt_pointers(struct Curl_easy *data, CURLoption option,
         Curl_hsts_cleanup(&data->hsts);
         data->hsts = data->share->hsts;
       }
-#endif
-#ifdef USE_SSL
-      if(data->share->ssl_scache)
-        data->state.ssl_scache = data->share->ssl_scache;
 #endif
 #ifdef USE_LIBPSL
       if(data->share->specifier & (1 << CURL_LOCK_DATA_PSL))
@@ -2422,6 +2417,7 @@ static CURLcode setopt_cptr(struct Curl_easy *data, CURLoption option,
      */
     return Curl_setstropt(&data->set.str[STRING_SSH_PRIVATE_KEY], ptr);
 
+#if defined(USE_LIBSSH2) || defined(USE_LIBSSH)
   case CURLOPT_SSH_HOST_PUBLIC_KEY_MD5:
     /*
      * Option to allow for the MD5 of the host public key to be checked
@@ -2434,7 +2430,7 @@ static CURLcode setopt_cptr(struct Curl_easy *data, CURLoption option,
      * Store the filename to read known hosts from.
      */
     return Curl_setstropt(&data->set.str[STRING_SSH_KNOWNHOSTS], ptr);
-
+#endif
   case CURLOPT_SSH_KEYDATA:
     /*
      * Custom client data to pass to the SSH keyfunc callback

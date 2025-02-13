@@ -90,8 +90,6 @@ libstubgss_la_DEPENDENCIES =
 endif
 
 if USE_TEST_BUNDLES
-AM_CPPFLAGS += -DCURL_NO_GETADDRINFO_OVERRIDE
-
 libtest_bundle.c: $(top_srcdir)/tests/mk-bundle.pl lib1521.c
 	@PERL@ $(top_srcdir)/tests/mk-bundle.pl $(srcdir) > libtest_bundle.c
 
@@ -118,8 +116,11 @@ CS_0 = @echo "  RUN     " $@;
 CS_1 =
 CS_ = $(CS_0)
 
+# ignore generated C files since they play by slightly different rules!
 checksrc:
-	$(CHECKSRC)@PERL@ $(top_srcdir)/scripts/checksrc.pl -D$(srcdir) $(srcdir)/*.[ch]
+	$(CHECKSRC)(@PERL@ $(top_srcdir)/scripts/checksrc.pl -D$(srcdir) \
+	  -W$(srcdir)/libtest_bundle.c \
+	  $(srcdir)/*.[ch])
 
 if DEBUGBUILD
 # for debug builds, we scan the sources on all regular make invokes

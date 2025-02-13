@@ -30,17 +30,11 @@
 #include "tool_util.h"
 #include "tool_version.h"
 #include "tool_cb_prg.h"
-#ifndef UNITTESTS
 #include "tool_hugehelp.h"
-#endif
 #include "tool_getparam.h"
 #include "terminal.h"
 
 #include "memdebug.h" /* keep this as LAST include */
-
-#ifndef ARRAYSIZE
-#define ARRAYSIZE(A) (sizeof(A)/sizeof((A)[0]))
-#endif
 
 struct category_descriptors {
   const char *opt;
@@ -115,7 +109,7 @@ static void print_category(unsigned int category, unsigned int cols)
 static int get_category_content(const char *category, unsigned int cols)
 {
   unsigned int i;
-  for(i = 0; i < ARRAYSIZE(categories); ++i)
+  for(i = 0; i < CURL_ARRAYSIZE(categories); ++i)
     if(curl_strequal(categories[i].opt, category)) {
       printf("%s: %s\n", categories[i].opt, categories[i].desc);
       print_category(categories[i].category, cols);
@@ -128,7 +122,7 @@ static int get_category_content(const char *category, unsigned int cols)
 static void get_categories(void)
 {
   unsigned int i;
-  for(i = 0; i < ARRAYSIZE(categories); ++i)
+  for(i = 0; i < CURL_ARRAYSIZE(categories); ++i)
     printf(" %-11s %s\n", categories[i].opt, categories[i].desc);
 }
 
@@ -137,9 +131,9 @@ static void get_categories_list(unsigned int width)
 {
   unsigned int i;
   size_t col = 0;
-  for(i = 0; i < ARRAYSIZE(categories); ++i) {
+  for(i = 0; i < CURL_ARRAYSIZE(categories); ++i) {
     size_t len = strlen(categories[i].opt);
-    if(i == ARRAYSIZE(categories) - 1) {
+    if(i == CURL_ARRAYSIZE(categories) - 1) {
       /* final category */
       if(col + len + 1 < width)
         printf("%s.\n", categories[i].opt);
@@ -286,7 +280,7 @@ void tool_help(char *category)
         msnprintf(cmdbuf, sizeof(cmdbuf), "\n    --no-%s", a->lname);
       else
         msnprintf(cmdbuf, sizeof(cmdbuf), "\n    %s", category);
-#ifndef UNITTESTS
+#ifdef USE_MANUAL
       if(a->cmd == C_XATTR)
         /* this is the last option, which then ends when FILES starts */
         showhelp("\nALL OPTIONS\n", cmdbuf, "\nFILES");

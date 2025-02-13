@@ -41,10 +41,6 @@
 #include "curl_memory.h"
 #include "memdebug.h"
 
-#ifndef ARRAYSIZE
-#define ARRAYSIZE(A) (sizeof(A)/sizeof((A)[0]))
-#endif
-
 static void cf_cntrl_update_info(struct Curl_easy *data,
                                  struct connectdata *conn);
 
@@ -520,7 +516,7 @@ unsigned char Curl_conn_http_version(struct Curl_easy *data)
     if(cf->cft->flags & (CF_TYPE_IP_CONNECT|CF_TYPE_SSL))
       break;
   }
-  return result ? 0 : v;
+  return (unsigned char)(result ? 0 : v);
 }
 
 bool Curl_conn_data_pending(struct Curl_easy *data, int sockindex)
@@ -724,7 +720,7 @@ static CURLcode cf_cntrl_all(struct connectdata *conn,
   CURLcode result = CURLE_OK;
   size_t i;
 
-  for(i = 0; i < ARRAYSIZE(conn->cfilter); ++i) {
+  for(i = 0; i < CURL_ARRAYSIZE(conn->cfilter); ++i) {
     result = Curl_conn_cf_cntrl(conn->cfilter[i], data, ignore_result,
                                 event, arg1, arg2);
     if(!ignore_result && result)

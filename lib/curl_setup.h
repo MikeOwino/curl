@@ -31,13 +31,6 @@
 /* Tell "curl/curl.h" not to include "curl/mprintf.h" */
 #define CURL_SKIP_INCLUDE_MPRINTF
 
-/* Make these warnings visible with an option. */
-#if !defined(CURL_WARN_SIGN_CONVERSION)
-#if defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-#endif
-#endif
-
 /* Set default _WIN32_WINNT */
 #ifdef __MINGW32__
 #include <_mingw.h>
@@ -374,6 +367,15 @@
 #  if TARGET_OS_MAC && !(defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE) && \
      defined(USE_IPV6)
 #    define CURL_MACOS_CALL_COPYPROXIES 1
+#  endif
+#endif
+
+#ifdef USE_ARES
+#  ifndef CARES_NO_DEPRECATED
+#  define CARES_NO_DEPRECATED  /* for ares_getsock() */
+#  endif
+#  if defined(CURL_STATICLIB) && !defined(CARES_STATICLIB) && defined(_WIN32)
+#    define CARES_STATICLIB  /* define it before including ares.h */
 #  endif
 #endif
 
@@ -931,6 +933,18 @@ endings either CRLF or LF so 't' is appropriate.
    as their argument */
 #define STRCONST(x) x,sizeof(x)-1
 
+#define CURL_ARRAYSIZE(A) (sizeof(A)/sizeof((A)[0]))
+
+#ifdef CURLDEBUG
+#define CURL_GETADDRINFO(host,serv,hint,res) \
+  curl_dbg_getaddrinfo(host, serv, hint, res, __LINE__, __FILE__)
+#define CURL_FREEADDRINFO(data) \
+  curl_dbg_freeaddrinfo(data, __LINE__, __FILE__)
+#else
+#define CURL_GETADDRINFO getaddrinfo
+#define CURL_FREEADDRINFO freeaddrinfo
+#endif
+
 /* Some versions of the Android NDK is missing the declaration */
 #if defined(HAVE_GETPWUID_R) && \
   defined(__ANDROID_API__) && (__ANDROID_API__ < 21)
@@ -981,10 +995,16 @@ int getpwuid_r(uid_t uid, struct passwd *pwd, char *buf,
 #  endif
 #endif
 
+#ifdef USE_OPENSSL
 /* OpenSSLv3 marks DES, MD5 and ENGINE functions deprecated but we have no
    replacements (yet) so tell the compiler to not warn for them. */
-#ifdef USE_OPENSSL
-#define OPENSSL_SUPPRESS_DEPRECATED
+#  define OPENSSL_SUPPRESS_DEPRECATED
+#  ifdef _WIN32
+/* Silence LibreSSL warnings about wincrypt.h collision. Works in 3.8.2+ */
+#    ifndef LIBRESSL_DISABLE_OVERRIDE_WINCRYPT_DEFINES_WARNING
+#    define LIBRESSL_DISABLE_OVERRIDE_WINCRYPT_DEFINES_WARNING
+#    endif
+#  endif
 #endif
 
 #if defined(CURL_INLINE)

@@ -21,19 +21,11 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+#include "curl/curl.h"
+#include <stdio.h>
 
-#include "tool_setup.h"
-#include "tool_hugehelp.h"
-
-void hugehelp(void)
+int main(void)
 {
-  puts("built-in manual was disabled at build-time");
-}
-
-void showhelp(const char *trigger, const char *arg, const char *endarg)
-{
-  (void)trigger;
-  (void)arg;
-  (void)endarg;
-  hugehelp();
+  printf("curl_version(): |%s|\n", curl_version());
+  return 0;
 }

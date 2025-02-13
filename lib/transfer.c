@@ -176,9 +176,9 @@ static bool xfer_recv_shutdown_started(struct Curl_easy *data)
   int sockindex;
 
   if(!data || !data->conn)
-    return CURLE_FAILED_INIT;
+    return FALSE;
   if(data->conn->sockfd == CURL_SOCKET_BAD)
-    return CURLE_FAILED_INIT;
+    return FALSE;
   sockindex = (data->conn->sockfd == data->conn->sock[SECONDARYSOCKET]);
   return Curl_shutdown_started(data, sockindex);
 }
@@ -566,12 +566,6 @@ CURLcode Curl_pretransfer(struct Curl_easy *data)
   data->state.list_only = data->set.list_only;
 #endif
   data->state.httpreq = data->set.method;
-
-#ifdef USE_SSL
-  if(!data->state.ssl_scache)
-    /* There was no ssl session cache set via a share, use the multi one */
-    data->state.ssl_scache = data->multi->ssl_scache;
-#endif
 
   data->state.requests = 0;
   data->state.followlocation = 0; /* reset the location-follow counter */
